@@ -84,10 +84,17 @@
 
         // 워터마크로 표시
         document.getElementById('watermark').innerText = getOrCreateUserID();
-    </script>
 
-    <!-- SurveyMonkey Script placed at the end of the body -->
-    <script>
+        // 위젯 로드 시 이벤트를 GA에 전송
+        function widgetLoaded() {
+            gtag('event', 'widget_load', {
+                'event_category': 'Widget',
+                'event_label': 'SurveyMonkey Widget Loaded',
+                'non_interaction': true // 사용자가 직접 상호작용하지 않아도 기록
+            });
+        }
+
+        // SurveyMonkey 스크립트를 로드하고, 위젯이 로드되면 이벤트 전송
         (function(t, e, s, n) {
             var o, a, c;
             t.SMCX = t.SMCX || [];
@@ -99,12 +106,10 @@
                 c.async = !0,
                 c.id = n,
                 c.src = "https://widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgdxH_2FbMQLD_2FPnwcZWI2QSc2XgVTNTMyDdPDNnsEu1bBYa.js",
-                a.parentNode.insertBefore(c, a)
+                a.parentNode.insertBefore(c, a),
+                c.onload = widgetLoaded // 위젯 로드 후 이벤트 트리거
             );
         })(window, document, "script", "smcx-sdk");
-
-        // 위젯을 중앙에 위치시키기 위해 클래스 추가
-        document.querySelector('.smcx-embed').classList.add('smcx-widget');
     </script>
 </body>
 </html>
