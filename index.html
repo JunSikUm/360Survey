@@ -5,9 +5,70 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-J0FWDQTJ5Y"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
-        gtag('config', 'G-J0FWDQTJ5Y');
+
+        // 고유 ID 생성 및 GA4에 user_id로 설정
+        function generateUUID() {
+            return 'xxxx-xxxx-4xxx-yxxx-xxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // 쿠키 또는 로컬 스토리지에서 고유 ID 가져오기 또는 생성
+        function getOrCreateUserID() {
+            let userID = localStorage.getItem('userID');
+            if (!userID) {
+                userID = generateUUID();
+                localStorage.setItem('userID', userID);
+            }
+            return userID;
+        }
+
+        // 사용자 고유 ID를 가져오기
+        const userID = getOrCreateUserID();
+        gtag('config', 'G-J0FWDQTJ5Y', { 'user_id': userID }); // 기본 설정과 user_id를 함께 설정
+
+        // 페이지 방문 이벤트 전송 (고유 ID 포함)
+        gtag('event', 'page_visit', {
+            'event_category': 'Page Interaction',
+            'event_label': 'Page Loaded',
+            'non_interaction': true // 사용자가 직접 상호작용하지 않아도 기록
+        });
+
+        // 캡처 시도를 방해하기 위해 경고창 띄우기
+        function showAlertWarning() {
+            alert("화면 캡처가 감지되었습니다. 보안상의 이유로 허용되지 않습니다.");
+        }
+
+        // 포커스가 다른 창으로 넘어갔을 때만 감지
+        window.addEventListener('blur', function() {
+            if (document.hasFocus()) return; // 현재 창이 포커스를 잃지 않았을 때만 실행
+
+            // GA에 이벤트 전송
+            gtag('event', 'window_blur', {
+                'event_category': 'User Interaction',
+                'event_label': 'Window Lost Focus'
+            });
+
+            // 캡처 시도를 방해하기 위해 경고창 띄우기
+            showAlertWarning();
+        });
+
+        // 키보드 이벤트 감지 (PrintScreen 또는 캡처 시도 시)
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'PrintScreen' || event.key === 'Print' || event.key === 'Snapshot' || (event.ctrlKey && event.key === 'p') || (event.metaKey && event.key === 'p')) {
+                // GA에 이벤트 전송
+                gtag('event', 'screen_capture_attempt', {
+                    'event_category': 'User Interaction',
+                    'event_label': 'Screen Capture Attempt'
+                });
+
+                // 캡처 시도를 방해하기 위해 경고창 띄우기
+                showAlertWarning();
+            }
+        });
     </script>
     
     <meta charset="UTF-8">
@@ -30,21 +91,16 @@
             z-index: 1001; /* z-index를 높게 설정하여 다른 요소 위에 표시 */
         }
         .watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: absolute;
             font-size: 24px;
-            color: rgba(0, 0, 0, 0.1); /* 반투명한 검은색 */
+            color: rgba(0, 0, 0, 0.05); /* 약간 더 진한 반투명 검은색 */
             pointer-events: none; /* 클릭 방지 */
-            z-index: 1000; /* 워터마크는 다른 요소들 뒤에 표시 */
+            z-index: 9999; /* 가장 위에 표시 */
+            white-space: nowrap;
         }
-        .smcx-widget {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* 정중앙에 위치하게 함 */
-            z-index: 1001; /* 다른 요소 위에 표시 */
+        body {
+            position: relative;
+            overflow: hidden; /* 스크롤 방지 */
         }
     </style>
 </head>
@@ -54,62 +110,60 @@
         <img src="https://i.ibb.co/GRdDDQ1/Kakao-Talk-20240826-150648709.jpg" alt="Company Logo" width="100">
     </a>
 
-    <!-- Body content goes here -->
-
     <!-- 페이지 하단의 SurveyMonkey 링크 -->
     <a class="footer-link" href="https://ko.surveymonkey.com">나만의 사용자 의견 설문조사 만들기</a>
 
-    <!-- 고유한 ID를 반투명 워터마크로 표시 -->
-    <div id="watermark" class="watermark"></div>
-
-    <!-- 고유 ID 생성 및 워터마크 설정 -->
+    <!-- 워터마크 반복 표시 -->
     <script>
-        // UUID 생성 함수
-        function generateUUID() {
-            return 'xxxx-xxxx-4xxx-yxxx-xxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+        // 워터마크 요소를 생성하는 함수
+        function createWatermark(text, x, y) {
+            const watermark = document.createElement('div');
+            watermark.className = 'watermark';
+            watermark.innerText = text;
+            watermark.style.top = y + 'px';
+            watermark.style.left = x + 'px';
+            document.body.appendChild(watermark);
         }
 
-        // 쿠키 또는 로컬 스토리지에서 고유 ID 가져오기 또는 생성
-        function getOrCreateUserID() {
-            let userID = localStorage.getItem('userID');
-            if (!userID) {
-                userID = generateUUID();
-                localStorage.setItem('userID', userID);
+        // 화면에 반복적으로 워터마크 생성
+        function generateWatermarks() {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const watermarkWidth = 200; // 워터마크의 예상 너비
+            const watermarkHeight = 50; // 워터마크의 예상 높이
+            const gapX = 200; // 가로 간격을 충분히 넓게 조정
+            const gapY = 10; // 세로 간격을 충분히 넓게 조정
+            const maxWatermarksPerRow = 5; // 한 행당 최대 워터마크 개수
+
+            // 워터마크를 격자 형태로 배치하여 겹침 방지
+            for (let y = 0; y < screenHeight; y += watermarkHeight + gapY) {
+                let watermarksInRow = 0; // 현재 행의 워터마크 수
+                for (let x = 0; x < screenWidth && watermarksInRow < maxWatermarksPerRow; x += watermarkWidth + gapX) {
+                    createWatermark(userID, x, y);  // 워터마크 위치 조정
+                    watermarksInRow++; // 워터마크 개수 증가
+                }
             }
-            return userID;
         }
 
-        // 워터마크로 표시
-        document.getElementById('watermark').innerText = getOrCreateUserID();
-
-        // 위젯 로드 시 이벤트를 GA에 전송
-        function widgetLoaded() {
-            gtag('event', 'widget_load', {
-                'event_category': 'Widget',
-                'event_label': 'SurveyMonkey Widget Loaded',
-                'non_interaction': true // 사용자가 직접 상호작용하지 않아도 기록
-            });
-        }
-
-        // SurveyMonkey 스크립트를 로드하고, 위젯이 로드되면 이벤트 전송
-        (function(t, e, s, n) {
-            var o, a, c;
-            t.SMCX = t.SMCX || [];
-            e.getElementById(n) || (
-                o = e.getElementsByTagName(s),
-                a = o[o.length - 1],
-                c = e.createElement(s),
-                c.type = "text/javascript",
-                c.async = !0,
-                c.id = n,
-                c.src = "https://widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgdxH_2FbMQLD_2FPnwcZWI2QSc2XgVTNTMyDdPDNnsEu1bBYa.js",
-                a.parentNode.insertBefore(c, a),
-                c.onload = widgetLoaded // 위젯 로드 후 이벤트 트리거
-            );
-        })(window, document, "script", "smcx-sdk");
+        // 워터마크 표시
+        generateWatermarks();
     </script>
-</body>
+
+<script>
+    (function(t, e, s, n) {
+      var o, a, c;
+      t.SMCX = t.SMCX || [];
+      e.getElementById(n) || (
+        o = e.getElementsByTagName(s), 
+        a = o[o.length - 1], 
+        c = e.createElement(s), 
+        c.type = "text/javascript", 
+        c.async = !0, 
+        c.id = n, 
+        c.src = "https://widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgdxWC3lffFr9zirQLJs8Qkgola8ocAHfIBxwUEXdSI7QJ.js", 
+        a.parentNode.insertBefore(c, a)
+      );
+    })(window, document, "script", "smcx-sdk");
+  </script>    
+ </body>
 </html>
